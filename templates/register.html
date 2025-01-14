@@ -1,0 +1,19 @@
+{%extends "base.html"%}
+{%block Container%}
+<form action="/registrati/" method="POST">
+    <h3>Nome</h3>
+    <input type="text" name="nome">
+    <h3>Cognome</h3>
+    <input type="text" name="cognome">
+    <h3>Username</h3>
+    <input type="text" name="username">
+    <h3>Password</h3>
+    <input type="password" name="password">
+    <h3>Confirm password</h3>
+    <input type="password" name="confirmPassword">
+    <br>
+    <br>
+    <input type="submit" value="Registrati"/>
+</form>
+{%endblock%}
+            
