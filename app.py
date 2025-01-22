@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
+
 app = Flask(__name__)
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 app.config['MYSQL_HOST'] = '138.41.20.102'
 app.config['MYSQL_PORT'] = 53306
@@ -11,53 +13,64 @@ app.config['MYSQL_DB'] = 'w3schools'
 mysql = MySQL(app)
 
 @app.route("/")
-def homepage():
-    return render_template("homepage.html")
+def home():
+    return render_template("home.html", titolo = "Home")
 
-@app.route("/registrati/", methods=["GET", "POST"])
+@app.route("/registrati/",methods=["GET","POST"])
 def registrati():
-    if request.method=='GET':
-        return render_template("register.html")
-    else:
-        nome= request.form.get("nome", "None")
-        cognome= request.form.get("cognome", "None")
-        username= request.form.get("username", "None")
-        password= request.form.get("password", "None")
-        confirmPassword= request.form.get("confirmPassword", "None")
+    if request.method == 'GET':
+        return render_template("register.html", titolo = "Registrati")
 
-        if nome=="None" or cognome=="None" or username=="None" or password=="None" or confirmPassword=="None":
-            return render_template("register.html")
-        elif password!=confirmPassword:
-            render_template("register.html")
+    cursor = mysql.connection.cursor()
+
+    nome = request.form.get("nome","")
+    cognome = request.form.get("cognome","")
+    username = request.form.get("userName","")
+    password = request.form.get("pass","")
+    confirmPass = request.form.get("confirmPass","")
+
+    if nome == "" or cognome == "" or username == "" or password == "" or confirmPass == "":
+        flash("Errore, almeno un campo è vuoto")
+        return redirect(url_for("registrati"))
+    elif password != confirmPass:
+        flash("Le password non concindono")
+        return redirect(url_for("registrati"))
+
     
-        query="SELECT username FROM users WHERE username=%s"
-        cursor=mysql.connection.cursor()
-        cursor.execute(query,(username,))
-        if cursor.fetchone():
-            return render_template("register.html")
-        
-        query="INSERT INTO users(username,password,nome,cognome) VALUES(%s,%s,%s,%s)"
-        cursor.execute(query,(username, generate_password_hash(password), nome, cognome))
-        mysql.connection.commit()
-        cursor.close()
-        return redirect(url_for("homepage"))
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query,(username,))
+    if cursor.fetchone():
+        flash("Username già presente")
+        return redirect(url_for("registrati"))
 
-@app.route("/login/", methods=["GET", "POST"])
+
+    query = "INSERT INTO users (username,password,nome,cognome) VALUES(%s,%s,%s,%s)"
+    cursor.execute(query,(username,generate_password_hash(password),nome,cognome))
+    mysql.connection.commit()
+    cursor.close()
+    flash('Utente registrato con successo')
+    return redirect(url_for("home"))
+    
+@app.route("/login/",methods=["GET","POST"])
 def login():
-    if request.method=='GET':
-        render_template("login.html")
+    if request.method == "GET":
+        return render_template("login.html", titolo = "Accedi")
+    
+    cursor = mysql.connection.cursor()
+
+    username = request.form.get("userName","")
+    password = request.form.get("pass","")
+    query = "SELECT password FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    hashPass = cursor.fetchone()
+
+    if hashPass and check_password_hash(hashPass[0], password):
+        flash("Login effettuato")
+        return redirect(url_for("home"))
+    
     else:
-        username= request.form.get("username", "None")
-        password= request.form.get("password", "None")
-        query="SELECT * FROM users WHERE username=%s AND password=%s"
-        cursor=mysql.connection.cursor()
-        cursor.execute(query,(username, password))
-        if cursor.fetchone():
-            return render_template("paginaLogin.html")
-        
-
-
-
+        flash("Credenziali errate")
+        return redirect(url_for("login"))
 
 
 
